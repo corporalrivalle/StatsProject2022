@@ -1,13 +1,7 @@
 import pandas as pd
 import numpy as np
-import matplotlib.pyplot as plt
-from mpl_toolkits import mplot3d
+from scipy.stats import ttest_1samp
 
-def func(x,a,b):
-    y=a*x+b
-    return y 
-
-#this function will return a dataframe with an exact bucket average 
 def AvgBucketData(df):
     weighted_df_avg = pd.DataFrame({"Mother's Delivery Weight":[],
                                     "Infant Birth Weight 14":[],
@@ -66,18 +60,6 @@ def AvgBucketData(df):
             weighted_df_avg.loc[len(weighted_df_avg.index)]=[momweight,inf_weight,region]
     return weighted_df_avg
 
-#this function converts the specific dataframe column into a numpy array, returns two arrays (xdata and ydata)
-def toNumpyArray(df):
-    xdat=[]
-    ydat=[]
-    for row in df.iterrows():
-        ydat.append(row[1]["Mother's Delivery Weight"])
-        xdat.append(row[1]["Infant Birth Weight 14"])
-    xdata = np.array(xdat)
-    ydata = np.array(ydat)
-    return xdata, ydata
-
-
 #reading data csv.
 df = pd.read_csv('StatsCSV.csv')
 del df["Notes"]
@@ -132,105 +114,29 @@ avg_dfw = AvgBucketData(dfw)
 frames = [avg_dfne, avg_dfmw, avg_dfs,avg_dfw]
 result = pd.concat(frames)
 
-#organizes data to be crunched for beta values
-rowX=[]
-for row in result.iterrows():
-    rowX.append(1)
-result["C"]=rowX
-ydata = np.array(result['Infant Birth Weight 14'])
-ydata=np.vstack(ydata)
+#Mother's Weight Hypothesis Testing
+#calculates the means
+df_mean = np.mean(result["Mother's Delivery Weight"])
+print("Mean weight",df_mean)
 
-xframe = pd.DataFrame({"C":[],"Mother's Delivery Weight":[],"Region Code":[]})
-for row in result.iterrows():
-    xframe.loc[len(xframe.index)]=[row[1]["C"],row[1]["Mother's Delivery Weight"],row[1]["Region Code"]]
+#runs a t test on the inputs and produces a p value
+tstat, p_val = ttest_1samp(result["Mother's Delivery Weight"],result["Mother's Delivery Weight"].size)
+print("p-values",p_val)
 
-#calculates beta values
-xdata = xframe.to_numpy()
-xtranspose = np.transpose(xdata)
-x_prod = np.matmul(xtranspose, xdata)
-x_inv = np.linalg.inv(x_prod)
-xprody = np.matmul(np.transpose(xdata),ydata)
-beta = np.matmul(x_inv,xprody)
-print("Beta:",beta)
-beta1 = beta[0]
-beta2 = beta[1]
-beta3 = beta[2]
+if p_val < 0.01:
+    print("We reject that Mother's Weight doesn't have an effect on Infant Weight at alpha =0.01")
+else:
+    print("We accept that Mother's Weight doesn't have an effect on Infant Weight at alpha =0.01")
 
+#Region Hypothesis Testing
+#calculates the means
+df_mean2 = np.mean(result["Region Code"])
+print("Mean Region",df_mean2)
 
-#drawing to graph
-from matplotlib import cm
-x1_data = result["Mother's Delivery Weight"].to_numpy()
-x2_data = result["Region Code"].to_numpy()
-y1_data = result["Infant Birth Weight 14"].to_numpy()
+tstat2, p_val2 = ttest_1samp(result["Region Code"],result["Region Code"].size)
+print("p-values",p_val2)
 
-X_mom, X_region = np.meshgrid(x1_data, x2_data)
-def regression(x1, x2):
-    return beta1+(x1*beta2)+(x2*beta3) #beta 2 corresponds to mother's weight, beta3 corresponds to region code
-vector1 = np.vectorize(regression)
-y_reg = vector1(X_mom, X_region)
-
-#drawing the graph
-fig = plt.figure()
-ax = plt.axes(projection='3d')
-ax.set_xlabel("Mother's Delivery Weight")
-ax.set_ylabel("Region Code")
-ax.set_zlabel("Infant Birth Weight 14")
-ax.scatter(x1_data, x2_data, y1_data)
-ax.plot_surface(X_mom, X_region, y_reg)
-ticks = np.arange(1,5,1)
-ax.set_yticks(ticks)
-plt.show()
-
-#creating summation function
-def summation(array_a):
-    sum=0
-    for i in array_a:
-        sum+=i
-    return sum
-
-#calculating SST
-ybarsum = summation(list(result["Infant Birth Weight 14"]))
-ybar=ybarsum/(len(list(result["Infant Birth Weight 14"]))-1)
-y_total_difference = []
-for i in list(result["Infant Birth Weight 14"]):
-    y_total_result = (i-ybar)**2
-    y_total_difference.append(y_total_result)
-y_sst = summation(y_total_difference)
-print("SST",y_sst)
-
-#calculating SSR
-xvalue = list(result["Mother's Delivery Weight"])
-zvalue = list(result["Region Code"])
-
-pre_SSR_list=[]
-for i in range(len(list(result["Infant Birth Weight 14"]))):
-    yhat = float(beta1 + beta2*xvalue[i] + beta3+zvalue[i])
-    yhat_ybar_diff = yhat - ybar
-    pre_SSR = yhat_ybar_diff**2
-    pre_SSR_list.append(pre_SSR)
-y_ssr = summation(pre_SSR_list)
-print("SSR",y_ssr)
-
-#calculating SSE
-i=0
-pre_SSE_list = []
-for item in list(result["Infant Birth Weight 14"]):
-    yhat = float(beta1 + beta2*xvalue[i] + beta3+zvalue[i])
-    yhat_y_diff = yhat - float(item)
-    pre_SSE = yhat_y_diff**2
-    pre_SSE_list.append(pre_SSE)
-    i+=1
-y_sse = summation(pre_SSE_list)
-print("SSE",y_sse)
-
-#calculating R-squared
-R_squared = y_ssr/y_sst
-print("R-squared",R_squared*100,"% (",R_squared,")")
-
-#calculating Error Variance
-MSE = y_sse/(len(list(result["Infant Birth Weight 14"]))-(2+1))
-print("MSE (Error Variance):",MSE,"grams")
-
-#calculating Standard Error
-reg_std_error=np.sqrt(MSE)
-print("Regression Standard Error (sigma):",reg_std_error, "grams")
+if p_val2 < 0.01:
+    print("We reject that Region doesn't have an effect on infant weight at alpha=0.01")
+else:
+    print("We accept that Region doesn't have an effect on infant weight at alpah =0.01")
