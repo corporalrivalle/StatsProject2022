@@ -195,11 +195,12 @@ avg_dfw = AvgBucketData(dfw)
 #combines the four average dataframes for each region into one large dataframe
 frames = [avg_dfne, avg_dfmw, avg_dfs,avg_dfw]
 result = pd.concat(frames)
+
+#organizes data to be crunched for beta values
 rowX=[]
 for row in result.iterrows():
     rowX.append(1)
 result["C"]=rowX
-
 ydata = np.array(result['Infant Birth Weight 14'])
 ydata=np.vstack(ydata)
 print(ydata)
@@ -207,27 +208,81 @@ print(ydata)
 xframe = pd.DataFrame({"C":[],"Mother's Delivery Weight":[],"Region Code":[]})
 for row in result.iterrows():
     xframe.loc[len(xframe.index)]=[row[1]["C"],row[1]["Mother's Delivery Weight"],row[1]["Region Code"]]
-
-print(xframe)
-
+#calculates beta values
 xdata = xframe.to_numpy()
-print(xdata)
-
 xtranspose = np.transpose(xdata)
 x_prod = np.matmul(xtranspose, xdata)
 x_inv = np.linalg.inv(x_prod)
-print(x_inv)
-
 xprody = np.matmul(np.transpose(xdata),ydata)
 beta = np.matmul(x_inv,xprody)
 print("Beta:",beta)
+beta1 = beta[0]
+beta2 = beta[1]
+beta3 = beta[2]
 
+
+#drawing to graph
+from matplotlib import cm
+x1_data = result["Mother's Delivery Weight"].to_numpy()
+print(x1_data)
+x2_data = result["Region Code"].to_numpy()
+y1_data = result["Infant Birth Weight 14"].to_numpy()
+
+X_mom, X_region = np.meshgrid(x1_data, x2_data)
+def regression(x1, x2):
+    return beta1+(x1*beta2)+(x2*beta3) #beta 2 corresponds to mother's weight, beta3 corresponds to region code
+reg_vec = np.vectorize(regression)
+y_reg = reg_vec(X_mom, X_region)
+
+#drawing the graph
 fig = plt.figure()
 ax = plt.axes(projection='3d')
-
-for row in result.iterrows():
-    xs = row[1]["Mother's Delivery Weight"]
-    zs = row[1]["Infant Birth Weight 14"]
-    ys = row[1]["Region Code"]
-    ax.scatter(xs,ys,zs)
+ax.set_xlabel("Mother's Delivery Weight")
+ax.set_ylabel("Region Code")
+ax.set_zlabel("Infant Birth Weight 14")
+ax.scatter(x1_data, x2_data, y1_data)
+ax.plot_surface(X_mom, X_region, y_reg)
 plt.show()
+
+def summation(array_a):
+    sum=0
+    for i in array_a:
+        sum+=i
+    return sum
+
+#calculating SST
+ybarsum = summation(list(result["Infant Birth Weight 14"]))
+ybar=ybarsum/(len(list(result["Infant Birth Weight 14"]))-1)
+y_total_difference = []
+for i in list(result["Infant Birth Weight 14"]):
+    y_total_result = (i-ybar)**2
+    y_total_difference.append(y_total_result)
+y_sst = summation(y_total_difference)
+print("SST",y_sst)
+
+#calculating SSR
+xvalue = list(result["Mother's Delivery Weight"])
+zvalue = list(result["Region Code"])
+
+pre_SSR_list=[]
+for i in range(len(list(result["Infant Birth Weight 14"]))):
+    yhat = float(beta1 + beta2*xvalue[i] + beta3+zvalue[i])
+    yhat_ybar_diff = yhat - ybar
+    pre_SSR = yhat_ybar_diff**2
+    pre_SSR_list.append(pre_SSR)
+y_ssr = summation(pre_SSR_list)
+print("SSR",y_ssr)
+
+i=0
+pre_SSE_list = []
+for item in list(result["Infant Birth Weight 14"]):
+    yhat = float(beta1 + beta2*xvalue[i] + beta3+zvalue[i])
+    yhat_y_diff = yhat - float(item)
+    pre_SSE = yhat_y_diff**2
+    pre_SSE_list.append(pre_SSE)
+    i+=1
+y_sse = summation(pre_SSE_list)
+print("SSE",y_sse)
+
+R_squared = y_ssr/y_sst
+print("R-squared",R_squared)
