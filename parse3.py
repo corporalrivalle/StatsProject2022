@@ -203,7 +203,6 @@ for row in result.iterrows():
 result["C"]=rowX
 ydata = np.array(result['Infant Birth Weight 14'])
 ydata=np.vstack(ydata)
-print(ydata)
 
 xframe = pd.DataFrame({"C":[],"Mother's Delivery Weight":[],"Region Code":[]})
 for row in result.iterrows():
@@ -224,7 +223,6 @@ beta3 = beta[2]
 #drawing to graph
 from matplotlib import cm
 x1_data = result["Mother's Delivery Weight"].to_numpy()
-print(x1_data)
 x2_data = result["Region Code"].to_numpy()
 y1_data = result["Infant Birth Weight 14"].to_numpy()
 
@@ -285,4 +283,10 @@ y_sse = summation(pre_SSE_list)
 print("SSE",y_sse)
 
 R_squared = y_ssr/y_sst
-print("R-squared",R_squared)
+print("R-squared",R_squared*100,"% (",R_squared,")")
+
+MSE = y_sse/(len(list(result["Infant Birth Weight 14"]))-(2+1))
+print("MSE (Error Variance):",MSE,"grams")
+
+reg_std_error=np.sqrt(MSE)
+print("Regression Standard Error (omega):",reg_std_error, "grams")
