@@ -1,14 +1,15 @@
-from tkinter import Y
 import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
 import random
 from scipy import optimize
+from mpl_toolkits import mplot3d
 
 def func(x,a,b):
     y=a*x+b
     return y 
 
+#this function will return a dataframe with an exact bucket average 
 def AvgBucketData(df):
     weighted_df_avg = pd.DataFrame({"Mother's Delivery Weight":[],
                                     "Infant Birth Weight 14":[]})
@@ -57,6 +58,7 @@ def AvgBucketData(df):
             weighted_df_avg.loc[len(weighted_df_avg.index)]=[momweight,inf_weight]
     return weighted_df_avg
 
+#this function will return dataframe with juttered values for a bucket
 def estimateData(df):
     weighted_df_est = pd.DataFrame({"Mother's Delivery Weight":[],
                               "Infant Birth Weight 14":[]})
@@ -107,6 +109,7 @@ def estimateData(df):
             weighted_df_est.loc[len(weighted_df_est.index)]=[momweight,inf_weight]
     return weighted_df_est
 
+#this function converts the specific dataframe column into a numpy array, returns two arrays (xdata and ydata)
 def toNumpyArray(df):
     xdat=[]
     ydat=[]
@@ -117,12 +120,14 @@ def toNumpyArray(df):
     ydata = np.array(ydat)
     return xdata, ydata
 
+#curve optimization function for plotting linear regression
 def curveOpt(func, xdata, ydata):
     alpha = optimize.curve_fit(func,xdata,ydata)[0]
     a = float(alpha[:1])
     b = float(alpha[1:])
     return a, b
 
+#plots the data with linear regression via curveopt, and formats the graph with labels and titles. does not display.
 def plotDF(xdata_est, ydata_est, xdata_avg, ydata_avg):
     #Points (This will be the estimated values)
     plt.plot(xdata_est,ydata_est,'o')
@@ -132,8 +137,8 @@ def plotDF(xdata_est, ydata_est, xdata_avg, ydata_avg):
     plt.xlabel("Infant Weight by Bucket (grams)")
     plt.ylabel("Mother's Delivery Weight by Bucket (lbs)")
     plt.figtext(0.5, 0.01, "\n*Jitter was applied to points for visualization. Best fit curve is calculated using real values.*",fontsize=6,ha="center")
-    plt.show()
 
+#combines all previous modules to create a graph with a single dataframe input
 def regionPlotDF(df):
     df_avg_bucket = AvgBucketData(df)
     df_est = estimateData(df)
@@ -141,7 +146,7 @@ def regionPlotDF(df):
     xdata_avg, ydata_avg = toNumpyArray(df_avg_bucket)
     plotDF(xdata_est, ydata_est, xdata_avg, ydata_avg)
 
-
+#reading data csv.
 df = pd.read_csv('StatsCSV.csv')
 del df["Notes"]
 
@@ -165,6 +170,7 @@ dfne['Percentage of Births'] = dfne_percentage_birth_array
 dfne=dfne.sort_values(by=['Infant Birth Weight 14 Code'])
 plt.title("Infant Weight as a Function of Mother's Weight, US-NORTHEAST")
 regionPlotDF(dfne)
+plt.show()
 
 #Dataframes and data calc for US-MIDWEST
 dfmw_percentage_birth_array=[]
@@ -174,6 +180,7 @@ dfmw['Percentage of Births'] = dfmw_percentage_birth_array
 dfmw=dfmw.sort_values(by=['Infant Birth Weight 14 Code'])
 plt.title("Infant Weight as a Function of Mother's Weight, US-MIDWEST")
 regionPlotDF(dfmw)
+plt.show()
 
 
 #Dataframes and data calc for US-SOUTH
@@ -184,6 +191,7 @@ dfs['Percentage of Births'] = dfs_percentage_birth_array
 dfs=dfs.sort_values(by=['Infant Birth Weight 14 Code'])
 plt.title("Infant Weight as a Function of Mother's Weight, US-SOUTH")
 regionPlotDF(dfs)
+plt.show()
 
 
 #Dataframes and data calc for US-WEST
@@ -194,5 +202,12 @@ dfw['Percentage of Births'] = dfw_percentage_birth_array
 dfw=dfw.sort_values(by=['Infant Birth Weight 14 Code'])
 plt.title("Infant Weight as a Function of Mother's Weight, US-WEST")
 regionPlotDF(dfw)
+plt.show()
 
-
+#displays aggregate graph for all four regions
+plt.title("Infant Weight as a Function of Mother's Weight, US-COMBINED")
+regionPlotDF(dfne)
+regionPlotDF(dfmw)
+regionPlotDF(dfs)
+regionPlotDF(dfw)
+plt.show()
